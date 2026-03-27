@@ -143,8 +143,8 @@ export default function RegisterPage() {
       if (response.ok) {
         localStorage.setItem("access_token", data.access)
         localStorage.setItem("refresh_token", data.refresh)
-        localStorage.setItem("user_type", userType)
-        window.location.href = userType === "candidate" ? "/dashboard" : "/recruiter/dashboard"
+        localStorage.setItem("user_type", data.user.user_type)
+        window.location.href = data.user.user_type === "candidate" ? "/dashboard" : "/recruiter/dashboard"
       } else {
         setError(data.error || "Google Auth failed")
       }

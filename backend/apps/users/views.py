@@ -170,12 +170,25 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             user = CustomUser.objects.filter(google_id=google_id).first()
             if not user:
                 user = CustomUser.objects.filter(email=email).first()
+                if user:
+                    print(f"User matched by email: {email} (UID: {user.id})")
+            else:
+                print(f"User matched by google_id: {google_id} (UID: {user.id})")
             
             if user:
                 # Existing user - merge/login
                 if not user.google_id:
-                    user.google_id = google_id
-                    user.save()
+                    # Only link if the user_type matches or we are intentional
+                    if user.user_type == user_type:
+                        print(f"Linking google_id {google_id} to user {user.email}")
+                        user.google_id = google_id
+                        user.save()
+                    else:
+                        print(f"NOT linking google_id because requested user_type '{user_type}' doesn't match existing user_type '{user.user_type}'")
+                        pass 
+                
+                if user.user_type != user_type:
+                    print(f"Role mismatch detected: DB={user.user_type}, Requested={user_type}")
                 
                 refresh = RefreshToken.for_user(user)
                 return Response({
@@ -183,9 +196,11 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'is_new': False,
+                    'role_mismatch': user.user_type != user_type
                 })
             else:
                 # New user - create account
+                print(f"Creating new {user_type} account for {email}")
                 user = CustomUser.objects.create_user(
                     username=email,
                     email=email,
@@ -210,9 +225,11 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'is_new': True,
+                    'is_profile_created': True
                 }, status=status.HTTP_201_CREATED)
                 
         except Exception as e:
+            print(f"Google auth error: {e}")
             return Response({'error': f'Google authentication failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
     
     # ===== NEW: Send OTP =====

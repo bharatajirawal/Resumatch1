@@ -38,7 +38,16 @@ export default function RecruiterDashboard() {
         })
         if (statsRes.ok) {
           const data = await statsRes.json()
+          
+          // Role Guard
+          if (data.user_type !== "recruiter") {
+            window.location.href = data.user_type === "candidate" ? "/dashboard" : "/login"
+            return
+          }
+
           setStats(data.stats)
+        } else if (statsRes.status === 401) {
+          window.location.href = "/login"
         }
 
         // Fetch Recent Jobs

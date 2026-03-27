@@ -65,7 +65,11 @@ The backend will start at `http://localhost:8000`.
 
 ## 2. Frontend Setup
 
-Open a **new** terminal (keep the backend running) and go to the project root:
+Open a **new** terminal (keep the backend running) and navigate to the `frontend` folder:
+
+```bash
+cd frontend
+```
 
 1. Install dependencies:
    ```bash

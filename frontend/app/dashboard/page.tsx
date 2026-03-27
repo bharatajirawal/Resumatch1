@@ -47,7 +47,16 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const data = await response.json()
+        
+        // Role Guard
+        if (data.user_type !== "candidate") {
+          window.location.href = data.user_type === "recruiter" ? "/recruiter/dashboard" : "/login"
+          return
+        }
+
         setStats(data.stats)
+      } else if (response.status === 401) {
+        window.location.href = "/login"
       }
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err)

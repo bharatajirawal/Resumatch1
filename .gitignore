@@ -45,19 +45,21 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.swp
+*.swo
+
+# Python / ML Specifics
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ipynb_checkpoints/
 
 # --------------------------------------------------------------------------
 # Django Backend (Subdirectory)
 # --------------------------------------------------------------------------
 
 # Python
-backend/__pycache__/
-backend/*/__pycache__/
-backend/*/*/__pycache__/
-backend/*.py[cod]
-backend/*/*.py[cod]
-backend/$py.class
+**/__pycache__/
 
 # Local environment
 backend/venv/
@@ -80,11 +82,8 @@ backend/*.log
 backend/celerybeat-schedule
 backend/.env
 
-# Custom test files / folders
-backend/tests/
-backend/test_*.py
+# Debug / Temp
 backend/debug/
-backend/tmp/
 
 # --------------------------------------------------------------------------
 # Generic
