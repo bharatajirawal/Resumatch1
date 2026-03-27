@@ -1,7 +1,12 @@
 "use client"
 
 import { SidebarNav } from "@/components/sidebar-nav"
-import { MatchAnalytics } from "@/components/match-analytics"
+import dynamic from 'next/dynamic'
+
+const MatchAnalytics = dynamic(() => import('@/components/match-analytics').then((mod) => mod.MatchAnalytics), { 
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full animate-pulse bg-muted rounded-lg" />
+})
 import { Card } from "@/components/ui/card"
 import { BarChart3, Sparkles, Briefcase, Settings } from "lucide-react"
 

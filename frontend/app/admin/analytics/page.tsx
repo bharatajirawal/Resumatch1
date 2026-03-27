@@ -1,7 +1,12 @@
 "use client"
 
 import { AdminSidebar } from "@/components/admin-sidebar"
-import { AdminAnalytics } from "@/components/admin-analytics"
+import dynamic from 'next/dynamic'
+
+const AdminAnalytics = dynamic(() => import('@/components/admin-analytics').then((mod) => mod.AdminAnalytics), { 
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full animate-pulse bg-muted rounded-lg" />
+})
 import { BarChart3, Users, Briefcase, TrendingUp, Settings } from "lucide-react"
 
 const navItems = [
