@@ -66,6 +66,59 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             }, status=status.HTTP_200_OK)
         return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def password_reset_request(self, request):
+        """Request a password reset OTP"""
+        try:
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user = CustomUser.objects.filter(email=email).first()
+            if user:
+                self._send_otp(user, email, subject="ResuMatch - Password Reset OTP")
+                
+            return Response({'message': 'If an account exists with this email, an OTP has been sent.'})
+        except Exception as e:
+            print(f"Password reset request error: {e}")
+            return Response({'error': f'Server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def password_reset_confirm(self, request):
+        """Reset password using OTP"""
+        try:
+            email = request.data.get('email')
+            otp_code = request.data.get('otp')
+            new_password = request.data.get('new_password')
+            
+            if not all([email, otp_code, new_password]):
+                return Response({'error': 'Email, OTP, and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            user = CustomUser.objects.filter(email=email).first()
+            if not user:
+                return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            otp = OTPVerification.objects.filter(
+                user=user, 
+                email=email, 
+                otp_code=otp_code, 
+                is_used=False
+            ).order_by('-created_at').first()
+            
+            if not otp or otp.is_expired:
+                return Response({'error': 'Invalid or expired OTP'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            user.set_password(new_password)
+            user.save()
+            
+            otp.is_used = True
+            otp.save()
+            
+            return Response({'message': 'Password reset successful. You can now login with your new password.'})
+        except Exception as e:
+            print(f"Password reset confirm error: {e}")
+            return Response({'error': f'Server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=['GET', 'PATCH'], permission_classes=[IsAuthenticated])
     def profile(self, request):
         if request.method.upper() == 'GET':
@@ -290,6 +343,11 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             otp.save()
             user.is_verified = True
             user.save()
+            
+            # Update recruiter profile if applicable
+            if user.user_type == 'recruiter' and hasattr(user, 'recruiter_profile'):
+                user.recruiter_profile.is_email_verified = True
+                user.recruiter_profile.save()
             return Response({'message': 'Email verified successfully', 'is_verified': True})
         else:
             remaining = otp.max_attempts - otp.attempts
@@ -297,8 +355,62 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 'error': 'Invalid OTP',
                 'attempts_remaining': remaining
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    # ===== NEW: Verification Endpoints =====
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def verify_linkedin(self, request):
+        """Verify LinkedIn profile (mock)"""
+        user = request.user
+        if user.user_type != 'recruiter':
+            return Response({'error': 'Only recruiters can verify LinkedIn'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        linkedin_url = request.data.get('linkedin_url') or user.recruiter_profile.linkedin_url
+        if not linkedin_url:
+            return Response({'error': 'LinkedIn URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        profile = user.recruiter_profile
+        profile.linkedin_url = linkedin_url
+        profile.is_linkedin_verified = True 
+        profile.save()
+        
+        return Response({
+            'message': 'LinkedIn profile verified successfully', 
+            'trust_score': profile.trust_score_info
+        })
     
-    def _send_otp(self, user, email):
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def verify_website(self, request):
+        """Verify Company Website (mock)"""
+        user = request.user
+        if user.user_type != 'recruiter':
+            return Response({'error': 'Only recruiters can verify website'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        profile = user.recruiter_profile
+        profile.is_website_verified = True
+        profile.save()
+        
+        return Response({
+            'message': 'Website verified successfully', 
+            'trust_score': profile.trust_score_info
+        })
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def verify_proof(self, request):
+        """Verify Company Proof (mock)"""
+        user = request.user
+        if user.user_type != 'recruiter':
+            return Response({'error': 'Only recruiters can verify company proof'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        profile = user.recruiter_profile
+        profile.has_company_proof = True
+        profile.save()
+        
+        return Response({
+            'message': 'Company proof verified successfully', 
+            'trust_score': profile.trust_score_info
+        })
+    
+    def _send_otp(self, user, email, subject='ResuMatch - Email Verification OTP'):
         """Generate and send OTP"""
         otp_code = ''.join(random.choices(string.digits, k=6))
         
@@ -312,7 +424,7 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         # Send email
         try:
             send_mail(
-                subject='ResuMatch - Email Verification OTP',
+                subject=subject,
                 message=f'Your OTP code is: {otp_code}\n\nThis code expires in 5 minutes.\n\nDo not share this code with anyone.',
                 from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@resumatch.com'),
                 recipient_list=[email],
@@ -320,5 +432,8 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
         except Exception as e:
             # Log the OTP for development
-            print(f"[DEV] OTP for {email}: {otp_code}")
+            print(f"\n{'='*50}")
+            print(f"DEBUG OTP for {email}: {otp_code}")
+            print(f"Subject: {subject}")
             print(f"Email sending failed: {e}")
+            print(f"{'='*50}\n")

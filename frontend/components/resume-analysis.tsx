@@ -105,17 +105,8 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Left: Score Circle */}
             <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="relative w-40 h-40 flex-shrink-0">
-                <svg className="w-40 h-40 transform -rotate-90">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="74"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    className="text-muted/10"
-                  />
+              <div className="relative w-40 h-40 flex-shrink-0 group">
+                <svg className="w-40 h-40 transform -rotate-90 transition-transform duration-500 group-hover:scale-105">
                   <circle
                     cx="80"
                     cy="80"
@@ -123,14 +114,24 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="8"
+                    className="text-muted/20"
+                  />
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="74"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
                     strokeDasharray={`${(overallScore / 100) * 465} 465`}
                     strokeLinecap="round"
-                    className="text-accent transition-all duration-1000 ease-out"
+                    className="text-accent transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(var(--accent),0.4)]"
+                    style={{ filter: "drop-shadow(0 0 4px var(--accent-foreground))" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-5xl font-black text-foreground tabular-nums">{overallScore}</div>
+                    <div className="text-5xl font-black text-foreground tabular-nums drop-shadow-sm">{overallScore}</div>
                     <div className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-1">Quality</div>
                   </div>
                 </div>
@@ -157,28 +158,33 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
                 Scoring Breakdown
               </h4>
               <div className="space-y-5">
-                {metrics.map((metric: any) => (
-                  <div key={metric.label} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {metric.status === "good" ? (
-                          <CheckCircle2 className="w-4 h-4 text-accent" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 text-yellow-500" />
-                        )}
-                        <span className="text-xs font-bold text-foreground">{metric.label}</span>
+                {metrics.map((metric: any) => {
+                  const percentage = metric.max > 0 ? (metric.value / metric.max) * 100 : metric.value;
+                  const isGood = metric.status === "good" || percentage >= 70;
+
+                  return (
+                    <div key={metric.label} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {isGood ? (
+                            <CheckCircle2 className="w-4 h-4 text-accent" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-yellow-500" />
+                          )}
+                          <span className="text-xs font-bold text-foreground">{metric.label}</span>
+                        </div>
+                        <span className="text-xs font-black text-muted-foreground">{Math.round(percentage)}%</span>
                       </div>
-                      <span className="text-xs font-black text-muted-foreground">{metric.value}%</span>
+                      <div className="h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 delay-300 ${isGood ? "bg-accent" : "bg-yellow-500"
+                            }`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-1000 delay-300 ${metric.status === "good" ? "bg-accent" : "bg-yellow-500"
-                          }`}
-                        style={{ width: `${metric.value}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -13,9 +13,10 @@ interface ResumeUploadProps {
   onUploadSuccess?: () => void
   hasResume?: boolean
   resumeId?: number
+  defaultPrimary?: boolean
 }
 
-export function ResumeUpload({ onUploadSuccess, hasResume, resumeId }: ResumeUploadProps) {
+export function ResumeUpload({ onUploadSuccess, hasResume, resumeId, defaultPrimary = true }: ResumeUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploaded, setUploaded] = useState(hasResume || false)
@@ -71,7 +72,7 @@ export function ResumeUpload({ onUploadSuccess, hasResume, resumeId }: ResumeUpl
       const formData = new FormData()
       formData.append("file", file)
       formData.append("title", file.name.split(".")[0])
-      formData.append("is_primary", "true")
+      formData.append("is_primary", defaultPrimary.toString())
 
       const response = await fetch(`${API_BASE_URL}/resumes/upload/`, {
         method: "POST",

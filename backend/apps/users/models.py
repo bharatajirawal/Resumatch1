@@ -40,6 +40,8 @@ class RecruiterProfile(models.Model):
     
     # Verification Flags
     is_email_verified = models.BooleanField(default=False)
+    is_linkedin_verified = models.BooleanField(default=False)
+    is_website_verified = models.BooleanField(default=False)
     has_company_proof = models.BooleanField(default=False)
     past_hires = models.IntegerField(default=0)
     
@@ -51,37 +53,46 @@ class RecruiterProfile(models.Model):
         score = 0
         domain_match = False
         
-        # 1. Email Verification (+20)
+        # 1. Email Verification (+25)
         if self.is_email_verified or self.user.is_verified: 
-            score += 20
+            score += 25
         
-        # 2. Domain Match (+30)
-        if self.company_website and self.user.email:
-             # Basic domain match logic
+        # 2. Domain/Website Match (+25)
+        if self.company_website and (self.is_website_verified or self.user.email.split('@')[-1] in self.company_website):
              domain = self.company_website.split('//')[-1].split('/')[0].replace('www.', '')
              email_domain = self.user.email.split('@')[-1]
-             if domain == email_domain and domain not in ['gmail.com', 'yahoo.com', 'outlook.com']:
-                 score += 30
+             if domain == email_domain and domain not in ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com']:
+                 score += 25
                  domain_match = True
+             elif self.is_website_verified:
+                 score += 25
                  
-        # 3. LinkedIn Connected (+20)
+        # 3. LinkedIn Connected & Verified (+25)
         if self.linkedin_url:
-            score += 20
+            score += 15
+            if self.is_linkedin_verified:
+                score += 10
             
-        # 4. Official Company Proof Uploaded (+20)
+        # 4. Official Company Proof Uploaded (+25)
         if self.has_company_proof:
-            score += 20
+            score += 25
             
-        # 5. Successful History (+10)
-        if self.past_hires > 0:
-            score += min(10, self.past_hires * 2)
+        # cap at 100
+        score = min(100, score)
             
         badge = "Verified" if score >= 80 else ("Partially Verified" if score >= 40 else "Unverified")
         return {
             "score": score,
             "domain_match": domain_match,
             "badge": badge,
-            "badge_color": "green" if score >= 80 else ("yellow" if score >= 40 else "red")
+            "is_verified": score >= 80,
+            "badge_color": "green" if score >= 80 else ("yellow" if score >= 40 else "red"),
+            "verifications": {
+                "email": self.is_email_verified or self.user.is_verified,
+                "linkedin": self.is_linkedin_verified,
+                "website": self.is_website_verified or domain_match,
+                "proof": self.has_company_proof
+            }
         }
     
     class Meta:

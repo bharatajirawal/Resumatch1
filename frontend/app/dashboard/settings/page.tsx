@@ -6,7 +6,7 @@ import { SidebarNav } from "@/components/sidebar-nav"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { BarChart3, Sparkles, Briefcase, Settings } from "lucide-react"
+import { BarChart3, Sparkles, Briefcase, Settings, Clock } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: <BarChart3 className="w-5 h-5" /> },
   { label: "My Resume", href: "/dashboard/resume", icon: <Sparkles className="w-5 h-5" /> },
   { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" /> },
+  { label: "Applications", href: "/dashboard/applications", icon: <Clock className="w-5 h-5" /> },
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 

@@ -68,10 +68,11 @@ class JobSerializer(serializers.ModelSerializer):
     applications = JobApplicationSerializer(many=True, read_only=True)
     company_name = serializers.CharField(source='recruiter.company_name', read_only=True)
     application_count = serializers.IntegerField(source='applications.count', read_only=True)
+    recruiter_verification = serializers.JSONField(source='recruiter.trust_score_info', read_only=True)
     
     class Meta:
         model = Job
-        fields = ['id', 'title', 'description', 'about_role', 'responsibilities', 'nice_to_have', 'benefits', 'ai_generated_description', 'requirements', 'skills_required', 'location', 'salary_min', 'salary_max', 'salary_currency', 'salary_type', 'experience_level', 'employment_type', 'category', 'company_name', 'is_active', 'applications', 'application_count', 'created_at']
+        fields = ['id', 'title', 'description', 'about_role', 'responsibilities', 'nice_to_have', 'benefits', 'ai_generated_description', 'requirements', 'skills_required', 'location', 'salary_min', 'salary_max', 'salary_currency', 'salary_type', 'experience_level', 'employment_type', 'category', 'company_name', 'recruiter_verification', 'is_active', 'applications', 'application_count', 'created_at']
         read_only_fields = ['ai_generated_description', 'applications', 'application_count']
 
 
@@ -79,10 +80,11 @@ class JobListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list views - no nested applications"""
     company_name = serializers.CharField(source='recruiter.company_name', read_only=True)
     application_count = serializers.IntegerField(source='applications.count', read_only=True)
+    recruiter_verification = serializers.JSONField(source='recruiter.trust_score_info', read_only=True)
     
     class Meta:
         model = Job
-        fields = ['id', 'title', 'description', 'location', 'salary_min', 'salary_max', 'experience_level', 'employment_type', 'category', 'company_name', 'is_active', 'application_count', 'created_at']
+        fields = ['id', 'title', 'description', 'location', 'salary_min', 'salary_max', 'experience_level', 'employment_type', 'category', 'company_name', 'recruiter_verification', 'is_active', 'application_count', 'created_at']
 
 
 class JobCreateUpdateSerializer(serializers.ModelSerializer):

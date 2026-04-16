@@ -4,16 +4,18 @@ import { SidebarNav } from "@/components/sidebar-nav"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Sparkles, Briefcase, Settings, MapPin, DollarSign, Heart } from "lucide-react"
+import { BarChart3, Sparkles, Briefcase, Settings, MapPin, DollarSign, Heart, Clock } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { RecruiterVerificationBadge } from "@/components/recruiter-verification-badge"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: <BarChart3 className="w-5 h-5" /> },
   { label: "My Resume", href: "/dashboard/resume", icon: <Sparkles className="w-5 h-5" /> },
-  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" />, badge: "12" },
+  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" /> },
+  { label: "Applications", href: "/dashboard/applications", icon: <Clock className="w-5 h-5" /> },
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
@@ -185,7 +187,10 @@ export default function MatchesPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-bold text-foreground mb-1">{match.job_details.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-3">{match.job_details.company_name}</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <p className="text-sm text-muted-foreground">{match.job_details.company_name}</p>
+                          <RecruiterVerificationBadge trustInfo={match.job_details.recruiter_verification} />
+                        </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
                           {match.match_highlights?.map((highlight: string) => (

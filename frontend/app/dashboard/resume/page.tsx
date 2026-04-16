@@ -3,12 +3,13 @@
 import { SidebarNav } from "@/components/sidebar-nav"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Sparkles, Briefcase, Settings, Download, Edit2, Trash2, History, Share2 } from "lucide-react"
+import { BarChart3, Sparkles, Briefcase, Settings, Download, Edit2, Trash2, History, Share2, Clock } from "lucide-react"
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: <BarChart3 className="w-5 h-5" /> },
   { label: "My Resume", href: "/dashboard/resume", icon: <Sparkles className="w-5 h-5" /> },
-  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" />, badge: "12" },
+  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" /> },
+  { label: "Applications", href: "/dashboard/applications", icon: <Clock className="w-5 h-5" /> },
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
@@ -16,6 +17,8 @@ import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { ResumeVersionsDialog } from "@/components/resume-versions-dialog"
 import { ResumeShareDialog } from "@/components/resume-share-dialog"
+import { ResumeUploadDialog } from "@/components/resume-upload-dialog"
+import { Plus } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
@@ -27,6 +30,7 @@ export default function ResumePage() {
   // Dialog state
   const [versionsResumeId, setVersionsResumeId] = useState<string | null>(null)
   const [shareResumeId, setShareResumeId] = useState<string | null>(null)
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
 
   const fetchResumes = async () => {
     const token = localStorage.getItem("access_token")
@@ -129,6 +133,13 @@ export default function ResumePage() {
               <h1 className="text-4xl font-bold text-foreground mb-2">My Resumes</h1>
               <p className="text-muted-foreground">Manage and optimize your resumes</p>
             </div>
+            <Button 
+              onClick={() => setIsUploadOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-5 h-5" />
+              Upload New
+            </Button>
           </div>
 
           <div className="space-y-4">
@@ -141,7 +152,7 @@ export default function ResumePage() {
                   <h3 className="text-lg font-bold text-foreground">No resumes yet</h3>
                   <p className="text-muted-foreground">Upload your first resume to get started</p>
                 </div>
-                <Button className="btn-primary">Upload Resume</Button>
+                <Button className="btn-primary" onClick={() => setIsUploadOpen(true)}>Upload Resume</Button>
               </Card>
             ) : (
               Array.isArray(resumes) && resumes.map((resume) => (
@@ -249,6 +260,12 @@ export default function ResumePage() {
         resumeId={shareResumeId || ""} 
         open={!!shareResumeId} 
         onOpenChange={(open) => !open && setShareResumeId(null)} 
+      />
+
+      <ResumeUploadDialog 
+        open={isUploadOpen} 
+        onOpenChange={setIsUploadOpen}
+        onSuccess={fetchResumes}
       />
     </div>
   )

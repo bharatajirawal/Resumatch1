@@ -12,7 +12,7 @@ class RecruiterProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RecruiterProfile
-        fields = ['company_name', 'company_website', 'company_logo', 'linkedin_url', 'industry', 'company_size', 'is_email_verified', 'has_company_proof', 'past_hires', 'trust_score']
+        fields = ['company_name', 'company_website', 'company_logo', 'linkedin_url', 'industry', 'company_size', 'is_email_verified', 'is_linkedin_verified', 'is_website_verified', 'has_company_proof', 'past_hires', 'trust_score']
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

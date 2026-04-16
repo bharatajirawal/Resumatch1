@@ -17,6 +17,7 @@ const navItems = [
 
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { RecruiterVerificationBadge } from "@/components/recruiter-verification-badge"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
@@ -141,6 +142,7 @@ export default function JobsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-bold text-foreground">{job.title}</h3>
+                        <RecruiterVerificationBadge trustInfo={job.recruiter_verification} />
                         <Badge
                           className={
                             job.is_active

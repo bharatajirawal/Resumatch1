@@ -15,6 +15,7 @@ const navItems = [
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { RecruiterVerificationBadge } from "@/components/recruiter-verification-badge"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
@@ -159,7 +160,10 @@ export default function RecruiterDashboard() {
                     <Link href={`/recruiter/jobs/${job.id}`} key={job.id} className="block">
                       <div className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
                         <div className="flex-1">
-                          <h4 className="font-bold text-foreground mb-1">{job.title}</h4>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-bold text-foreground">{job.title}</h4>
+                            <RecruiterVerificationBadge trustInfo={job.recruiter_verification} />
+                          </div>
                           <p className="text-xs text-muted-foreground">Posted {new Date(job.created_at).toLocaleDateString()}</p>
                         </div>
 

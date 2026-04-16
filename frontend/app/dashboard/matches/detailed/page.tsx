@@ -12,7 +12,7 @@ import { BarChart3, Sparkles, Briefcase, Settings, MapPin, DollarSign, Heart, Ex
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: <BarChart3 className="w-5 h-5" /> },
   { label: "My Resume", href: "/dashboard/resume", icon: <Sparkles className="w-5 h-5" /> },
-  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" />, badge: "12" },
+  { label: "Job Matches", href: "/dashboard/matches", icon: <Briefcase className="w-5 h-5" /> },
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 

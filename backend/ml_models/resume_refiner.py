@@ -85,7 +85,11 @@ class ResumeRefiner:
                 - strengths (list of strings)
                 - weaknesses (list of strings)
                 - suggestions (list of strings)
-                - metrics (list of objects with 'label', 'value', 'max', 'status')
+                - metrics (list of 5 objects with 'label', 'value', 'max', 'status'). 
+                  IMPORTANT: 'value' MUST be a score from 0-100 for that category (e.g., how good their projects are, not how many). 
+                  'max' should always be 100. 
+                  'status' should be 'good' if value >= 70, otherwise 'warning'.
+                  The overall 'score' should be a weighted average of these metrics.
                 
                 Resume content:
                 {text[:5000]}
@@ -126,7 +130,7 @@ class ResumeRefiner:
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
-                        {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) and Senior Tech Recruiter. Analyze the provided resume text with high precision. Provide a JSON response with: score (0-100), feedback (object with 'overall', 'skills', 'experience' fields), skills (list), experience_level (string), job_titles (list), summary (string), strengths (list), weaknesses (list), suggestions (list), and metrics (list of objects with 'label', 'value', 'max', 'status')."},
+                        {"role": "system", "content": "You are an expert ATS (Applicant Tracking System) and Senior Tech Recruiter. Analyze the provided resume text with high precision. Provide a JSON response with: score (0-100), feedback (object with 'overall', 'skills', 'experience' fields), skills (list), experience_level (string), job_titles (list), summary (string), strengths (list), weaknesses (list), suggestions (list), and metrics (list of 5 objects with 'label', 'value', 'max', 'status'). IMPORTANT: 'value' must be a percentage score (0-100) for the category, 'max' is 100, and 'status' is 'good' if value >= 70 else 'warning'."},
                         {"role": "user", "content": f"Analyze this resume content:\n\n{text}"}
                     ],
                     response_format={ "type": "json_object" }

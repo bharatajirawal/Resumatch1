@@ -42,6 +42,52 @@ export function JobPostingForm({
   const [isGenerating, setIsGenerating] = useState(false)
   const [recruiterTrust, setRecruiterTrust] = useState<any>(null)
 
+  const RecruiterTrustBanner = () => {
+    if (!recruiterTrust) return null;
+    
+    const isVerified = recruiterTrust.is_verified || recruiterTrust.score >= 80;
+
+    return (
+      <div className={`p-4 rounded-xl mb-6 border flex items-center justify-between gap-4 transition-all ${isVerified ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'}`}>
+        <div className="flex items-center gap-3">
+          {isVerified ? (
+            <div className="p-2 rounded-full bg-green-500/20">
+              <ShieldCheck className="w-5 h-5 text-green-500" />
+            </div>
+          ) : (
+            <div className="p-2 rounded-full bg-yellow-500/20">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              Recruiter Status: {isVerified ? 'Verified Recruiter ✅' : 'Profile Unverified'}
+              <Badge variant="outline" className={`text-[10px] h-4 ${isVerified ? 'text-green-500 border-green-500/30' : 'text-yellow-500 border-yellow-500/30'}`}>
+                {recruiterTrust.score}% Trust Score
+              </Badge>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isVerified 
+                ? "Your job postings will be marked as 'Verified' – Safe to Apply." 
+                : "Improve your score to 80% to get the 'Verified' badge and increase candidate trust."}
+            </p>
+          </div>
+        </div>
+        {!isVerified && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs hover:bg-yellow-500/20 text-yellow-500 gap-1 h-8"
+            onClick={() => window.location.href = '/recruiter/settings'}
+          >
+            Verify Now
+            <ArrowRight className="w-3 h-3" />
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   const [formData, setFormData] = useState({
     // Step 1: Basics
     title: initialData?.title || "",
@@ -73,21 +119,27 @@ export function JobPostingForm({
     skills: initialData?.skills_required || [],
   })
 
-  // Mock trust score for now (backend would provide this)
+  // Fetch real trust score from backend
   useEffect(() => {
     const fetchTrust = async () => {
-      // In a real app, fetch from GET /api/users/recruiter-profile/
-      setRecruiterTrust({
-        score: 65,
-        badge: "Partially Verified",
-        color: "yellow",
-        verifications: {
-          email: true,
-          domain: false,
-          linkedin: true,
-          proof: false
+      const token = localStorage.getItem("access_token")
+      if (!token) return
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/profile/`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        })
+        if (response.ok) {
+          const data = await response.json()
+          if (data.recruiter_profile?.trust_score) {
+            setRecruiterTrust(data.recruiter_profile.trust_score)
+          }
         }
-      })
+      } catch (err) {
+        console.error("Failed to fetch trust score:", err)
+      }
     }
     fetchTrust()
   }, [])
@@ -176,6 +228,7 @@ export function JobPostingForm({
       </div>
 
       <Card className="border-border bg-card/40 backdrop-blur-sm p-6 md:p-8 shadow-xl">
+        <RecruiterTrustBanner />
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {step === 1 && (
