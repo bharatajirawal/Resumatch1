@@ -16,6 +16,8 @@ import {
   Cell,
 } from "recharts"
 
+import { useState, useEffect } from "react"
+
 const userGrowth = [
   { month: "Jan", candidates: 120, recruiters: 45 },
   { month: "Feb", candidates: 180, recruiters: 62 },
@@ -34,6 +36,16 @@ const matchingData = [
 const colors = ["var(--color-accent)", "var(--color-primary)", "var(--color-secondary)"]
 
 export function AdminAnalytics() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return (
+    <div className="h-[300px] w-full animate-pulse bg-muted rounded-lg" />
+  )
+
   return (
     <div className="space-y-6">
       <Card className="border border-border bg-card p-6">

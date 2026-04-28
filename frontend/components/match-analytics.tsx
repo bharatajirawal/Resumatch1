@@ -3,6 +3,8 @@
 import { Card } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 
+import { useState, useEffect } from "react"
+
 const matchDistribution = [
   { range: "90-100%", count: 3 },
   { range: "80-89%", count: 8 },
@@ -19,6 +21,16 @@ const matchTrend = [
 ]
 
 export function MatchAnalytics() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return (
+    <div className="h-[300px] w-full animate-pulse bg-muted rounded-lg" />
+  )
+
   return (
     <div className="space-y-6">
       <Card className="border border-border bg-card p-6">

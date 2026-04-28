@@ -10,7 +10,7 @@ import { BarChart3, Sparkles, Briefcase, Settings, Clock } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+
 
 
 const navItems = [
@@ -21,63 +21,35 @@ const navItems = [
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
+import { useAuth } from "@/components/providers/auth-provider"
+import { apiClient } from "@/lib/api-client"
+
 export default function SettingsPage() {
   const { toast } = useToast()
+  const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
-  const [fetching, setFetching] = useState(true)
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    jobTitle: "",
-    location: "",
+    firstName: user?.first_name || "",
+    lastName: user?.last_name || "",
+    email: user?.email || "",
+    phone: user?.phone_number || "",
+    jobTitle: user?.candidate_profile?.headline || "",
+    location: user?.candidate_profile?.location || "",
   })
 
+  // Synchronize form data if user profile updates
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/users/profile/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          
-          // Role Guard
-          if (data.user_type !== "candidate") {
-            window.location.href = data.user_type === "recruiter" ? "/recruiter/dashboard" : "/login"
-            return
-          }
-
-          setFormData({
-            firstName: data.first_name || "",
-            lastName: data.last_name || "",
-            email: data.email || "",
-            phone: data.phone_number || "",
-            jobTitle: data.candidate_profile?.headline || "",
-            location: data.candidate_profile?.location || "",
-          })
-        } else if (response.status === 401) {
-          window.location.href = "/login"
-        }
-      } catch (err) {
-        console.error("Failed to fetch profile:", err)
-      } finally {
-        setFetching(false)
-      }
+    if (user) {
+      setFormData({
+        firstName: user.first_name || "",
+        lastName: user.last_name || "",
+        email: user.email || "",
+        phone: user.phone_number || "",
+        jobTitle: user.candidate_profile?.headline || "",
+        location: user.candidate_profile?.location || "",
+      })
     }
-
-    fetchProfile()
-  }, [])
+  }, [user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -86,7 +58,6 @@ export default function SettingsPage() {
 
   const handleSubmit = async () => {
     setLoading(true)
-    const token = localStorage.getItem("access_token")
 
     try {
       const patchData = {
@@ -99,32 +70,19 @@ export default function SettingsPage() {
         },
       }
 
-      const response = await fetch(`${API_BASE_URL}/users/profile/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(patchData),
-      })
+      const response = await apiClient.patch("/users/profile/", patchData)
 
-      if (response.ok) {
+      if (response.status === 200) {
+        await refreshUser()
         toast({
           title: "Profile updated",
           description: "Your changes have been saved successfully.",
         })
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.detail || "Failed to update profile",
-          variant: "destructive",
-        })
       }
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: "Failed to connect to server",
+        description: err.response?.data?.detail || "Failed to update profile",
         variant: "destructive",
       })
     } finally {
@@ -132,7 +90,7 @@ export default function SettingsPage() {
     }
   }
 
-  if (fetching) {
+  if (!user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

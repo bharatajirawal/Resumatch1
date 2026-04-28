@@ -14,47 +14,24 @@ const navItems = [
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
-import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export default function ApplicationsPage() {
   const { toast } = useToast()
-  const [applications, setApplications] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/jobs/my-applications/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setApplications(data)
-        } else if (response.status === 401) {
-          window.location.href = "/login"
-        }
-      } catch (err) {
-        console.error("Failed to fetch applications:", err)
-        toast({ title: "Error", description: "Could not load applications", variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchApplications()
-  }, [toast])
+  const { data: applications = [], isLoading: loading } = useQuery({
+    queryKey: ['applications'],
+    queryFn: async () => {
+      const response = await apiClient.get("/jobs/my-applications/")
+      return response.data
+    },
+    enabled: !!user
+  })
 
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {

@@ -13,62 +13,40 @@ const navItems = [
   { label: "Settings", href: "/recruiter/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { RecruiterVerificationBadge } from "@/components/recruiter-verification-badge"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export default function RecruiterDashboard() {
-  const [stats, setStats] = useState<any>(null)
-  const [recentJobs, setRecentJobs] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
+  // Fetch Stats
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['recruiter-dashboard-stats'],
+    queryFn: async () => {
+      const response = await apiClient.get("/users/dashboard/")
+      return response.data
+    },
+    enabled: !!user && user.user_type === 'recruiter'
+  })
 
-      try {
-        // Fetch Stats
-        const statsRes = await fetch(`${API_BASE_URL}/users/dashboard/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (statsRes.ok) {
-          const data = await statsRes.json()
-          
-          // Role Guard
-          if (data.user_type !== "recruiter") {
-            window.location.href = data.user_type === "candidate" ? "/dashboard" : "/login"
-            return
-          }
+  // Fetch Recent Jobs
+  const { data: jobsData = [], isLoading: jobsLoading } = useQuery({
+    queryKey: ['recruiter-recent-jobs'],
+    queryFn: async () => {
+      const response = await apiClient.get("/jobs/my_jobs/")
+      const data = response.data
+      return Array.isArray(data) ? data : (data?.results || [])
+    },
+    enabled: !!user && user.user_type === 'recruiter'
+  })
 
-          setStats(data.stats)
-        } else if (statsRes.status === 401) {
-          window.location.href = "/login"
-        }
-
-        // Fetch Recent Jobs
-        const jobsRes = await fetch(`${API_BASE_URL}/jobs/my_jobs/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (jobsRes.ok) {
-          const data = await jobsRes.json()
-          const items = Array.isArray(data) ? data : (data?.results || [])
-          setRecentJobs(items.slice(0, 3)) // Get top 3
-        }
-      } catch (err) {
-        console.error("Dashboard fetch error:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDashboardData()
-  }, [])
+  const stats = statsData?.stats
+  const recentJobs = jobsData.slice(0, 3)
+  const loading = statsLoading || jobsLoading
 
   return (
     <div className="flex h-screen bg-background">

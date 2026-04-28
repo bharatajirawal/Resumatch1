@@ -1,59 +1,47 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, memo } from "react"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, AlertCircle, TrendingUp, Search, Info, Layout, Zap, Sparkles } from "lucide-react"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+import { CheckCircle2, AlertCircle, TrendingUp, Layout, Zap, Sparkles } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ResumeAnalysisProps {
   resumeId?: number
 }
 
-export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
-  const [analysis, setAnalysis] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchPrimaryResume = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) return
-
-      // Don't fetch if we have an explicit resumeId of undefined/null
+export const ResumeAnalysis = memo(function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
+  const { data: analysis, isLoading: loading } = useQuery({
+    queryKey: ["resume-analysis", resumeId],
+    queryFn: async () => {
       if (resumeId === undefined || resumeId === null) {
-        setLoading(false)
-        setAnalysis(null)
-        return
+        const response = await apiClient.get("/resumes/primary/")
+        return response.data
       }
+      const response = await apiClient.get(`/resumes/${resumeId}/`)
+      return response.data
+    },
+    enabled: resumeId !== null,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  })
 
-      setLoading(true)
-      try {
-        const url = resumeId
-          ? `${API_BASE_URL}/resumes/${resumeId}/`
-          : `${API_BASE_URL}/resumes/primary/`
-
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setAnalysis(data)
-        } else if (response.status === 404) {
-          setAnalysis(null)
-        }
-      } catch (err) {
-        console.error("Failed to fetch primary resume analysis:", err)
-        setAnalysis(null)
-      } finally {
-        setLoading(false)
-      }
+  const metrics = useMemo(() => {
+    if (!analysis) return []
+    const analysisRecord = analysis.analysis
+    let m = analysisRecord?.metrics || []
+    if (!Array.isArray(m)) m = []
+    
+    if (m.length === 0) {
+      return [
+        { label: "Keyword Optimization", value: 0, max: 100, status: "warning" },
+        { label: "Format Clarity", value: 0, max: 100, status: "warning" },
+        { label: "Experience Details", value: 0, max: 100, status: "warning" },
+        { label: "Achievement Metrics", value: 0, max: 100, status: "warning" },
+      ]
     }
-
-    fetchPrimaryResume()
-  }, [resumeId])
+    return m
+  }, [analysis])
 
   if (loading) {
     return (
@@ -69,26 +57,10 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
   const overallScore = analysis.ai_score || 0
   const analysisRecord = analysis.analysis
 
-  // Ensure metrics is always an array
-  let metrics = analysisRecord?.metrics || []
-  if (!Array.isArray(metrics)) {
-    metrics = []
-  }
-
-  // Provide default metrics if empty
-  if (metrics.length === 0) {
-    metrics = [
-      { label: "Keyword Optimization", value: 0, max: 100, status: "warning" },
-      { label: "Format Clarity", value: 0, max: 100, status: "warning" },
-      { label: "Experience Details", value: 0, max: 100, status: "warning" },
-      { label: "Achievement Metrics", value: 0, max: 100, status: "warning" },
-    ]
-  }
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Overview Section */}
-      <Card className="border border-border bg-card p-8 shadow-sm">
+      <Card className="border border-border bg-card/50 backdrop-blur-sm p-8 shadow-sm">
         <div className="space-y-8">
           <div className="flex justify-between items-start">
             <div>
@@ -125,8 +97,8 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
                     strokeWidth="10"
                     strokeDasharray={`${(overallScore / 100) * 465} 465`}
                     strokeLinecap="round"
-                    className="text-accent transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(var(--accent),0.4)]"
-                    style={{ filter: "drop-shadow(0 0 4px var(--accent-foreground))" }}
+                    className="text-accent transition-all duration-1000 ease-out"
+                    style={{ filter: "drop-shadow(0 0 4px var(--color-accent))" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -194,7 +166,7 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
       {/* Details Grid */}
       <div className="grid md:grid-cols-2 gap-8">
         {/* Strengths */}
-        <Card className="border border-border bg-card p-8 shadow-sm hover:border-accent/40 transition-colors group">
+        <Card className="border border-border bg-card/40 backdrop-blur-sm p-8 shadow-sm hover:border-accent/40 transition-colors group">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <CheckCircle2 className="w-5 h-5 text-accent" />
@@ -216,7 +188,7 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
         </Card>
 
         {/* Improvements */}
-        <Card className="border border-border bg-card p-8 shadow-sm hover:border-destructive/40 transition-colors group">
+        <Card className="border border-border bg-card/40 backdrop-blur-sm p-8 shadow-sm hover:border-destructive/40 transition-colors group">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <AlertCircle className="w-5 h-5 text-destructive" />
@@ -239,7 +211,7 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
       </div>
 
       {/* Actionable Suggestions */}
-      <Card className="border border-accent/20 bg-accent/5 p-8 border-l-8 border-l-accent shadow-sm overflow-hidden relative">
+      <Card className="border border-accent/20 bg-accent/5 backdrop-blur-md p-8 border-l-8 border-l-accent shadow-sm overflow-hidden relative">
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start relative z-10">
           <div className="w-14 h-14 rounded-2xl bg-accent/20 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="w-8 h-8 text-accent" />
@@ -272,4 +244,4 @@ export function ResumeAnalysis({ resumeId }: ResumeAnalysisProps) {
       </Card>
     </div>
   )
-}
+})

@@ -135,6 +135,14 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=['GET'], permission_classes=[IsAuthenticated])
     def dashboard(self, request):
         user = request.user
+        
+        # Try to get from cache first
+        from django.core.cache import cache
+        cache_key = f"user_dashboard_{user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+            
         data = {
             'user_type': user.user_type,
             'stats': {}
@@ -182,7 +190,9 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 'job_views': 0,
                 'trust_score': recruiter_profile.trust_score_info if recruiter_profile else None
             }
-            
+        
+        # Cache for 5 minutes
+        cache.set(cache_key, data, 300)
         return Response(data)
     
     # ===== NEW: Google OAuth =====

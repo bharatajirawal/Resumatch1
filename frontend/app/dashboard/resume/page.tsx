@@ -13,93 +13,37 @@ const navItems = [
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ]
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { ResumeVersionsDialog } from "@/components/resume-versions-dialog"
 import { ResumeShareDialog } from "@/components/resume-share-dialog"
 import { ResumeUploadDialog } from "@/components/resume-upload-dialog"
 import { Plus } from "lucide-react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+import { useResumes } from "@/hooks/use-resumes"
 
 export default function ResumePage() {
   const { toast } = useToast()
-  const [resumes, setResumes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: resumes = [], isLoading: loading, deleteResume, reanalyzeResume, refetch } = useResumes()
   
   // Dialog state
   const [versionsResumeId, setVersionsResumeId] = useState<string | null>(null)
   const [shareResumeId, setShareResumeId] = useState<string | null>(null)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
 
-  const fetchResumes = async () => {
-    const token = localStorage.getItem("access_token")
-    if (!token) {
-      window.location.href = "/login"
-      return
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/resumes/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log("Resume data received:", data)
-        // Handle both direct array and paginated response
-        if (Array.isArray(data)) {
-          setResumes(data)
-        } else if (data && Array.isArray(data.results)) {
-          setResumes(data.results)
-        } else {
-          setResumes([])
-        }
-      } else if (response.status === 401) {
-        window.location.href = "/login"
-      }
-    } catch (err) {
-      console.error("Failed to fetch resumes:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchResumes()
-  }, [])
-
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this resume?")) return
 
-    const token = localStorage.getItem("access_token")
     try {
-      const response = await fetch(`${API_BASE_URL}/resumes/${id}/`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      await deleteResume(id)
+      toast({
+        title: "Resume deleted",
+        description: "Your resume has been deleted successfully.",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Resume deleted",
-          description: "Your resume has been deleted successfully.",
-        })
-        setResumes((prev) => prev.filter((r) => r.id !== id))
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete resume",
-          variant: "destructive",
-        })
-      }
     } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to connect to server",
+        description: "Failed to delete resume",
         variant: "destructive",
       })
     }
@@ -201,16 +145,9 @@ export default function ResumePage() {
                           size="sm"
                           className="border-border text-foreground hover:bg-muted gap-2 bg-transparent"
                           onClick={async () => {
-                            const token = localStorage.getItem("access_token")
                             try {
-                              const res = await fetch(`${API_BASE_URL}/resumes/${resume.id}/reanalyze/`, {
-                                method: "POST",
-                                headers: { Authorization: `Bearer ${token}` }
-                              })
-                              if (res.ok) {
-                                toast({ title: "Precision Analysis Done", description: "Score and feedback updated using deep AI." })
-                                fetchResumes()
-                              }
+                              await reanalyzeResume(resume.id)
+                              toast({ title: "Precision Analysis Done", description: "Score and feedback updated using deep AI." })
                             } catch (err) {
                               toast({ title: "Error", description: "Re-analysis failed", variant: "destructive" })
                             }
@@ -265,7 +202,7 @@ export default function ResumePage() {
       <ResumeUploadDialog 
         open={isUploadOpen} 
         onOpenChange={setIsUploadOpen}
-        onSuccess={fetchResumes}
+        onSuccess={refetch}
       />
     </div>
   )

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,23 +8,22 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ArrowRight } from "lucide-react"
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google"
+import { useRouter } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [userType, setUserType] = useState<"candidate" | "recruiter">("candidate")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    console.log("[v0] Starting login with email:", email)
-
-    setError("")
     setLoading(true)
+    setError(null)
 
     try {
       const response = await fetch(`${API_BASE_URL}/users/login/`, {
@@ -34,15 +32,12 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: email,
-          password: password,
+          email,
+          password,
         }),
       })
 
-      console.log("[v0] Login response status:", response.status)
-
       const data = await response.json()
-      console.log("[v0] Login response:", data)
 
       if (response.ok) {
         // Save tokens and user info
@@ -51,26 +46,23 @@ export default function LoginPage() {
         localStorage.setItem("user_type", data.user.user_type)
         localStorage.setItem("user_id", data.user.id)
 
-        console.log("[v0] Login successful, redirecting to:", data.user.user_type)
-
         // Redirect based on user type
         const redirectUrl = data.user.user_type === "recruiter" ? "/recruiter/dashboard" : "/dashboard"
-        window.location.href = redirectUrl
+        router.push(redirectUrl)
       } else {
-        setError(data.detail || "Invalid email or password")
-        console.log("[v0] Login error:", data)
+        setError(data.detail || "Login failed. Please check your credentials.")
       }
     } catch (err) {
-      console.log("[v0] Error:", err)
-      setError("Failed to connect to server. Make sure Django backend is running on http://localhost:8000")
+      setError("Failed to connect to the server. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    setError("")
     setLoading(true)
+    setError(null)
+
     try {
       const response = await fetch(`${API_BASE_URL}/users/google_auth/`, {
         method: "POST",
@@ -79,20 +71,22 @@ export default function LoginPage() {
         },
         body: JSON.stringify({
           token: credentialResponse.credential,
-          user_type: userType
+          user_type: userType,
         }),
       })
+
       const data = await response.json()
+
       if (response.ok) {
         localStorage.setItem("access_token", data.access)
         localStorage.setItem("refresh_token", data.refresh)
         localStorage.setItem("user_type", data.user.user_type)
-        window.location.href = data.user.user_type === "candidate" ? "/dashboard" : "/recruiter/dashboard"
+        router.push(data.user.user_type === "candidate" ? "/dashboard" : "/recruiter/dashboard")
       } else {
-        setError(data.error || "Google Auth failed")
+        setError(data.error || data.detail || "Google authentication failed.")
       }
     } catch (err) {
-      setError("Failed to connect to server.")
+      setError("Failed to connect to the server.")
     } finally {
       setLoading(false)
     }
@@ -124,20 +118,24 @@ export default function LoginPage() {
             {/* User Type Selection */}
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setUserType("candidate")}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${userType === "candidate"
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  userType === "candidate"
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:opacity-80"
-                  }`}
+                }`}
               >
                 Candidate
               </button>
               <button
+                type="button"
                 onClick={() => setUserType("recruiter")}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${userType === "recruiter"
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  userType === "recruiter"
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:opacity-80"
-                  }`}
+                }`}
               >
                 Recruiter
               </button>
@@ -186,7 +184,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button type="submit" disabled={loading} className="btn-primary w-full">
+            <Button type="submit" disabled={loading} className="btn-primary w-full font-bold">
               {loading ? "Signing in..." : "Sign In"}
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>

@@ -52,50 +52,22 @@ const matches = [
   },
 ]
 
+import { useMatches } from "@/hooks/use-matches"
+import { useRouter } from "next/navigation"
+
 export default function MatchesPage() {
   const { toast } = useToast()
-  const [matches, setMatches] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const { 
+    data: matches = [], 
+    isLoading: loading, 
+    findMatches, 
+    apply, 
+    compare 
+  } = useMatches()
+  
   const [saved, setSaved] = useState<number[]>([])
-
-  useEffect(() => {
-    const fetchMatches = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        window.location.href = "/login"
-        return
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/matches/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          console.log("Match data received:", data)
-          // Handle both direct array and paginated response
-          if (Array.isArray(data)) {
-            setMatches(data)
-          } else if (data && Array.isArray(data.results)) {
-            setMatches(data.results)
-          } else {
-            setMatches([])
-          }
-        } else if (response.status === 401) {
-          window.location.href = "/login"
-        }
-      } catch (err) {
-        console.error("Failed to fetch matches:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchMatches()
-  }, [])
+  const [comparisons, setComparisons] = useState<Record<string, any>>({})
 
   if (loading) {
     return (
@@ -132,47 +104,25 @@ export default function MatchesPage() {
                   <Button
                     className="btn-primary"
                     onClick={async () => {
-                      setLoading(true)
-                      const token = localStorage.getItem("access_token")
                       try {
-                        const response = await fetch(`${API_BASE_URL}/matches/find_matches/`, {
-                          method: "POST",
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                          },
-                        })
-
-                        const data = await response.json()
-
-                        if (response.ok) {
-                          if (data.matches && data.matches.length === 0) {
-                            toast({
-                              title: "No Matches Yet",
-                              description: data.message || "No jobs match your profile at this time.",
-                            })
-                          } else {
-                            // Assuming data itself is the array of matches, or data.matches is the array
-                            setMatches(data.matches || data)
-                            toast({
-                              title: "Matches Found",
-                              description: `We found ${(data.matches || data).length} jobs for you!`,
-                            })
-                          }
+                        const data = await findMatches()
+                        if (data.matches && data.matches.length === 0) {
+                          toast({
+                            title: "No Matches Yet",
+                            description: data.message || "No jobs match your profile at this time.",
+                          })
                         } else {
                           toast({
-                            title: "Cannot Find Matches",
-                            description: data.error || "Please upload a resume first.",
-                            variant: "destructive",
+                            title: "Matches Found",
+                            description: `We found ${(data.matches || data).length} jobs for you!`,
                           })
                         }
-                      } catch (err) {
+                      } catch (err: any) {
                         toast({
-                          title: "Error",
-                          description: "Failed to find matches. Check your connection.",
+                          title: "Cannot Find Matches",
+                          description: err.response?.data?.error || "Please upload a resume first.",
                           variant: "destructive",
                         })
-                      } finally {
-                        setLoading(false)
                       }
                     }}
                   >
@@ -227,18 +177,9 @@ export default function MatchesPage() {
                             size="sm"
                             className="border-border text-foreground hover:bg-muted bg-transparent"
                             onClick={async () => {
-                              const token = localStorage.getItem("access_token")
                               try {
-                                const res = await fetch(`${API_BASE_URL}/matches/compare_resumes/?job_id=${match.job_details.id}`, {
-                                  headers: { Authorization: `Bearer ${token}` }
-                                })
-                                if (res.ok) {
-                                  const data = await res.json()
-                                  // Find current match and update it with comparisons
-                                  setMatches(prev => prev.map(m =>
-                                    m.id === match.id ? { ...m, comparisons: data } : m
-                                  ))
-                                }
+                                const data = await compare(match.job_details.id)
+                                setComparisons(prev => ({ ...prev, [match.id]: data }))
                               } catch (err) {
                                 console.error("Compare error:", err)
                               }
@@ -260,32 +201,16 @@ export default function MatchesPage() {
                             className="btn-primary"
                             size="sm"
                             onClick={async () => {
-                              const token = localStorage.getItem("access_token")
                               try {
-                                const response = await fetch(`${API_BASE_URL}/jobs/${match.job_details.id}/apply/`, {
-                                  method: "POST",
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                })
-
-                                if (response.ok) {
-                                  toast({
-                                    title: "Application Sent",
-                                    description: `You've successfully applied for ${match.job_details.title} at ${match.job_details.company_name}`,
-                                  })
-                                } else {
-                                  const error = await response.json()
-                                  toast({
-                                    title: "Application Failed",
-                                    description: error.detail || "Something went wrong",
-                                    variant: "destructive",
-                                  })
-                                }
-                              } catch (err) {
+                                await apply({ jobId: match.job_details.id })
                                 toast({
-                                  title: "Error",
-                                  description: "Failed to connect to server",
+                                  title: "Application Sent",
+                                  description: `You've successfully applied for ${match.job_details.title} at ${match.job_details.company_name}`,
+                                })
+                              } catch (err: any) {
+                                toast({
+                                  title: "Application Failed",
+                                  description: err.response?.data?.detail || "Something went wrong",
                                   variant: "destructive",
                                 })
                               }
@@ -296,11 +221,11 @@ export default function MatchesPage() {
                         </div>
                       </div>
                     </div>
-                    {match.comparisons && (
+                    {comparisons[match.id] && (
                       <div className="mt-6 pt-6 border-t border-border space-y-4">
                         <h4 className="text-sm font-bold text-foreground">Match Comparison for all your resumes:</h4>
                         <div className="grid gap-3">
-                          {match.comparisons.map((comp: any) => (
+                          {comparisons[match.id].map((comp: any) => (
                             <div key={comp.resume_id} className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
                               <div className="flex items-center gap-3">
                                 <span className="text-xs font-medium text-foreground">{comp.resume_title}</span>
@@ -314,32 +239,18 @@ export default function MatchesPage() {
                                   size="sm"
                                   className="h-8 text-[10px] hover:bg-accent/10 hover:text-accent"
                                   onClick={async () => {
-                                    const token = localStorage.getItem("access_token")
                                     try {
-                                      const response = await fetch(`${API_BASE_URL}/jobs/${match.job_details.id}/apply/`, {
-                                        method: "POST",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                          Authorization: `Bearer ${token}`,
-                                        },
-                                        body: JSON.stringify({ resume_id: comp.resume_id })
+                                      await apply({ jobId: match.job_details.id, resumeId: comp.resume_id })
+                                      toast({
+                                        title: "Application Sent",
+                                        description: `Applied using ${comp.resume_title} with ${Math.round(comp.match_score)}% match!`,
                                       })
-
-                                      if (response.ok) {
-                                        toast({
-                                          title: "Application Sent",
-                                          description: `Applied using ${comp.resume_title} with ${Math.round(comp.match_score)}% match!`,
-                                        })
-                                      } else {
-                                        const error = await response.json()
-                                        toast({
-                                          title: "Application Failed",
-                                          description: error.detail || "Something went wrong",
-                                          variant: "destructive",
-                                        })
-                                      }
-                                    } catch (err) {
-                                      toast({ title: "Error", description: "Connection failed", variant: "destructive" })
+                                    } catch (err: any) {
+                                      toast({
+                                        title: "Application Failed",
+                                        description: err.response?.data?.detail || "Something went wrong",
+                                        variant: "destructive",
+                                      })
                                     }
                                   }}
                                 >

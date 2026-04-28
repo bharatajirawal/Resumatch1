@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   },
 }
 
+import { QueryProvider } from "@/components/providers/query-provider"
+import { AuthProvider } from "@/components/providers/auth-provider"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,8 +41,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans antialiased bg-background text-foreground`}>
-        {children}
+      <body className={`${_geist.variable} ${_geistMono.variable} font-sans antialiased bg-background text-foreground`}>
+        <QueryProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </QueryProvider>
         <Analytics />
         <Toaster />
       </body>
